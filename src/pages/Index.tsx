@@ -15,6 +15,30 @@ import ParameterPanel from '@/components/ParameterPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import MathematicalBackground from '@/components/MathematicalBackground';
 
+// Utility function to generate random hex string
+const generateRandomHex = (length: number) => {
+  const chars = '0123456789abcdef';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// Utility function to generate realistic private key
+const generatePrivateKey = () => {
+  return '0x' + generateRandomHex(64); // 256-bit key
+};
+
+// Utility function to calculate polynomial degree
+const calculatePolynomialDegree = (N: number) => {
+  let sum = 0;
+  for (let i = 1; i <= N - 3; i++) {
+    sum += i;
+  }
+  return 1 + sum;
+};
+
 const Index = () => {
   const [attackProgress, setAttackProgress] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -30,24 +54,47 @@ const Index = () => {
   const simulateAttack = async () => {
     setIsRunning(true);
     setAttackProgress(0);
+    setResults(null);
     
-    // Simulate the attack progression
-    const steps = [10, 25, 40, 55, 70, 85, 100];
-    for (let step of steps) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setAttackProgress(step);
+    // Generate a new random private key for this attack
+    const actualKey = generatePrivateKey();
+    const recoveredKey = actualKey; // In a real attack, this would be computed
+    
+    console.log('Starting attack simulation with parameters:', parameters);
+    console.log('Generated private key:', actualKey);
+    
+    // Simulate the attack progression with more realistic timing
+    const steps = [15, 30, 45, 60, 75, 90, 100];
+    const delays = [400, 500, 600, 700, 800, 600, 400]; // Variable delays for realism
+    
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, delays[i]));
+      setAttackProgress(steps[i]);
+      console.log(`Attack progress: ${steps[i]}%`);
     }
     
-    // Simulate successful key recovery
-    setResults({
-      success: true,
-      recoveredKey: '0x2f4a8b3c9d1e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
-      actualKey: '0x2f4a8b3c9d1e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2',
-      polynomialDegree: 8,
-      rootsFound: 1,
-      timeElapsed: '2.3s'
-    });
+    // Calculate realistic polynomial degree based on N
+    const polynomialDegree = calculatePolynomialDegree(parameters.N);
     
+    // Simulate execution time based on polynomial degree
+    const baseTime = 1.2;
+    const complexityFactor = Math.pow(polynomialDegree / 8, 1.5);
+    const executionTime = (baseTime * complexityFactor).toFixed(1) + 's';
+    
+    // Generate realistic results
+    const attackResults = {
+      success: Math.random() > 0.1, // 90% success rate for demo
+      recoveredKey: recoveredKey,
+      actualKey: actualKey,
+      polynomialDegree: polynomialDegree,
+      rootsFound: Math.floor(Math.random() * 3) + 1, // 1-3 roots
+      timeElapsed: executionTime,
+      signaturesUsed: parameters.N,
+      curve: parameters.curve
+    };
+    
+    console.log('Attack completed with results:', attackResults);
+    setResults(attackResults);
     setIsRunning(false);
   };
 
@@ -121,6 +168,7 @@ const Index = () => {
                         className="bg-slate-700 border-slate-600 text-white"
                         min="4"
                         max="10"
+                        disabled={isRunning}
                       />
                     </div>
                     <div>
@@ -144,6 +192,17 @@ const Index = () => {
                     </div>
                     <Progress value={attackProgress} className="h-2" />
                   </div>
+
+                  <div className="space-y-2 text-sm text-gray-400">
+                    <div className="flex justify-between">
+                      <span>Polynomial Degree:</span>
+                      <span className="text-white">{calculatePolynomialDegree(parameters.N)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Expected Complexity:</span>
+                      <span className="text-white">O(d³)</span>
+                    </div>
+                  </div>
                   
                   <Button 
                     onClick={simulateAttack}
@@ -158,7 +217,7 @@ const Index = () => {
                     ) : (
                       <>
                         <Unlock className="w-4 h-4 mr-2" />
-                        Launch Attack
+                        Launch New Attack
                       </>
                     )}
                   </Button>
