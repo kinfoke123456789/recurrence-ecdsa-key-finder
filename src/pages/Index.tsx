@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ import AttackVisualization from '@/components/AttackVisualization';
 import ParameterPanel from '@/components/ParameterPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import MathematicalBackground from '@/components/MathematicalBackground';
+import RealDataAnalysis from '@/components/RealDataAnalysis';
 
 // Utility function to generate random hex string
 const generateRandomHex = (length: number) => {
@@ -110,20 +110,20 @@ const Index = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            ECDSA Nonce Attack Simulator
+            ECDSA Vulnerability Scanner
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Explore how linear recurrence relations in ECDSA nonces can be exploited to recover private keys through polynomial root finding
+            Real-time blockchain analysis for ECDSA nonce vulnerabilities and private key recovery from actual transaction data
           </p>
           <div className="flex items-center justify-center gap-4 mt-6">
-            <Badge variant="secondary" className="bg-purple-600/20 text-purple-300 border-purple-500/30">
-              Cryptographic Analysis
+            <Badge variant="secondary" className="bg-green-600/20 text-green-300 border-green-500/30">
+              Live Blockchain Data
             </Badge>
             <Badge variant="secondary" className="bg-red-600/20 text-red-300 border-red-500/30">
-              Educational Purpose
+              Real Vulnerability Detection
             </Badge>
             <Badge variant="secondary" className="bg-blue-600/20 text-blue-300 border-blue-500/30">
-              SageMath Implementation
+              Private Key Recovery
             </Badge>
           </div>
         </div>
@@ -132,19 +132,23 @@ const Index = () => {
         <Alert className="mb-8 border-amber-500/30 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-400" />
           <AlertDescription className="text-amber-200">
-            This tool demonstrates a serious vulnerability in ECDSA implementations. Never use predictable nonces in production cryptographic systems.
+            This tool analyzes real blockchain data for actual vulnerabilities. Use responsibly and only for legitimate security research.
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="attack" className="space-y-8">
+        <Tabs defaultValue="live-analysis" className="space-y-8">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-700">
-            <TabsTrigger value="attack" className="data-[state=active]:bg-purple-600">Attack Demo</TabsTrigger>
+            <TabsTrigger value="live-analysis" className="data-[state=active]:bg-purple-600">Live Analysis</TabsTrigger>
+            <TabsTrigger value="simulation" className="data-[state=active]:bg-purple-600">Demo Mode</TabsTrigger>
             <TabsTrigger value="theory" className="data-[state=active]:bg-purple-600">Mathematical Background</TabsTrigger>
-            <TabsTrigger value="parameters" className="data-[state=active]:bg-purple-600">Parameters</TabsTrigger>
             <TabsTrigger value="results" className="data-[state=active]:bg-purple-600">Results Analysis</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="attack" className="space-y-6">
+          <TabsContent value="live-analysis">
+            <RealDataAnalysis />
+          </TabsContent>
+
+          <TabsContent value="simulation" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
@@ -234,13 +238,6 @@ const Index = () => {
 
           <TabsContent value="theory">
             <MathematicalBackground />
-          </TabsContent>
-
-          <TabsContent value="parameters">
-            <ParameterPanel 
-              parameters={parameters}
-              setParameters={setParameters}
-            />
           </TabsContent>
 
           <TabsContent value="results">
