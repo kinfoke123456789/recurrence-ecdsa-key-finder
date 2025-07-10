@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { BookOpen, Formula, Lightbulb, AlertCircle } from 'lucide-react';
+import { BookOpen, Calculator, Lightbulb, AlertCircle } from 'lucide-react';
 
 const MathematicalBackground = () => {
   return (
@@ -41,7 +41,7 @@ const MathematicalBackground = () => {
       <Card className="bg-slate-800/50 border-slate-700">
         <CardHeader>
           <CardTitle className="flex items-center text-white">
-            <Formula className="w-5 h-5 mr-2 text-purple-400" />
+            <Calculator className="w-5 h-5 mr-2 text-purple-400" />
             Linear Recurrence Vulnerability
           </CardTitle>
         </CardHeader>
