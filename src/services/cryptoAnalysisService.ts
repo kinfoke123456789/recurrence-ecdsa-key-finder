@@ -1,4 +1,3 @@
-
 interface AnalysisSession {
   id: string;
   startTime: number;
@@ -24,6 +23,8 @@ interface VulnerabilityResult {
     relatedTxids: string[];
   };
 }
+
+import { attemptKeyRecoveryFromTransactions, parseDERSignature } from './ecdsaCrypto';
 
 class CryptoAnalysisService {
   private sessions: Map<string, AnalysisSession> = new Map();
@@ -60,8 +61,11 @@ class CryptoAnalysisService {
     const session = this.sessions.get(sessionId)!;
     
     try {
+      console.log(`Starting real blockchain analysis from block ${params.startBlock} to ${params.endBlock}`);
+      
       // Fetch real blockchain data
       const blocks = await this.fetchBlockRange(params.startBlock, params.endBlock);
+      console.log(`Fetched ${blocks.length} blocks for analysis`);
       
       for (const block of blocks) {
         const transactions = await this.analyzeBlock(block);
@@ -69,10 +73,14 @@ class CryptoAnalysisService {
         session.blocksAnalyzed++;
         session.transactionsAnalyzed += transactions.length;
         
-        // Analyze for vulnerabilities
+        console.log(`Analyzed block ${block.height}: ${transactions.length} transactions with signatures`);
+        
+        // Analyze for vulnerabilities using real crypto implementation
         const vulnerabilities = await this.detectVulnerabilities(transactions);
         session.results.push(...vulnerabilities);
         session.vulnerabilitiesFound = session.results.length;
+        
+        console.log(`Found ${vulnerabilities.length} vulnerabilities in block ${block.height}`);
         
         // Yield control to prevent blocking
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -81,6 +89,8 @@ class CryptoAnalysisService {
       session.status = 'completed';
       session.endTime = Date.now();
       
+      console.log(`Analysis completed. Total vulnerabilities found: ${session.vulnerabilitiesFound}`);
+      
     } catch (error) {
       console.error('Analysis error:', error);
       session.status = 'error';
@@ -88,7 +98,6 @@ class CryptoAnalysisService {
   }
   
   private async fetchBlockRange(start: number, end: number) {
-    // Fetch actual block data from blockchain API
     const blocks = [];
     
     for (let height = start; height <= end; height++) {
@@ -112,7 +121,6 @@ class CryptoAnalysisService {
   }
   
   private async analyzeBlock(block: any) {
-    // Extract and analyze transactions from block
     const transactions = [];
     
     try {
@@ -144,79 +152,81 @@ class CryptoAnalysisService {
     const vulnerabilities: VulnerabilityResult[] = [];
     const signatureMap = new Map<string, any[]>();
     
-    // Extract signatures and group by R value
+    console.log(`Analyzing ${transactions.length} transactions for vulnerabilities`);
+    
+    // Extract signatures and group by R value using real crypto parsing
     transactions.forEach(tx => {
       tx.inputs.forEach((input: any) => {
-        const sig = this.parseSignature(input.signature);
-        if (sig) {
-          if (!signatureMap.has(sig.r)) {
-            signatureMap.set(sig.r, []);
+        if (input.signature && input.signature.length > 20) {
+          const parsed = parseDERSignature(input.signature);
+          if (parsed) {
+            const rValueHex = '0x' + parsed.r.toString(16);
+            
+            if (!signatureMap.has(rValueHex)) {
+              signatureMap.set(rValueHex, []);
+            }
+            signatureMap.get(rValueHex)!.push({
+              tx,
+              signature: parsed,
+              input,
+              rValue: rValueHex
+            });
           }
-          signatureMap.get(sig.r)!.push({
-            tx,
-            signature: sig,
-            input
-          });
         }
       });
     });
     
-    // Detect nonce reuse (same R value)
+    console.log(`Found ${signatureMap.size} unique R values`);
+    
+    // Detect nonce reuse (same R value) using real cryptographic recovery
     signatureMap.forEach((sigs, rValue) => {
       if (sigs.length > 1) {
-        // Found potential nonce reuse
-        const vuln: VulnerabilityResult = {
-          type: 'nonce_reuse',
-          severity: 'critical',
-          txid: sigs[0].tx.txid,
-          blockHeight: sigs[0].tx.blockHeight,
-          confidence: 0.95,
-          details: {
-            rValue: rValue,
-            sValue: sigs[0].signature.s,
-            publicKey: this.extractPublicKey(sigs[0].input),
-            relatedTxids: sigs.map((s: any) => s.tx.txid)
+        console.log(`Found potential nonce reuse with R value: ${rValue}`);
+        
+        // Attempt real private key recovery
+        const recovery = attemptKeyRecoveryFromTransactions(
+          {
+            txid: sigs[0].tx.txid,
+            signature: sigs[0].input.signature
+          },
+          {
+            txid: sigs[1].tx.txid,
+            signature: sigs[1].input.signature
           }
-        };
+        );
         
-        // Attempt private key recovery
-        vuln.recoveredKey = this.attemptKeyRecovery(sigs);
-        
-        vulnerabilities.push(vuln);
+        if (recovery.success) {
+          console.log(`Successfully recovered private key: ${recovery.privateKey}`);
+          
+          const vuln: VulnerabilityResult = {
+            type: 'nonce_reuse',
+            severity: 'critical',
+            txid: sigs[0].tx.txid,
+            blockHeight: sigs[0].tx.blockHeight,
+            confidence: recovery.confidence,
+            recoveredKey: recovery.privateKey,
+            details: {
+              rValue: recovery.rValue || rValue,
+              sValue: '0x' + sigs[0].signature.s.toString(16),
+              publicKey: this.extractPublicKey(sigs[0].input),
+              relatedTxids: sigs.map((s: any) => s.tx.txid)
+            }
+          };
+          
+          vulnerabilities.push(vuln);
+        }
       }
     });
     
+    console.log(`Detected ${vulnerabilities.length} confirmed vulnerabilities`);
     return vulnerabilities;
   }
   
-  private parseSignature(scriptsig: string) {
-    if (!scriptsig || scriptsig.length < 20) return null;
-    
-    try {
-      // Parse DER encoded signature
-      const r = scriptsig.substring(8, 72);
-      const s = scriptsig.substring(76, 140);
-      
-      return { r, s };
-    } catch {
-      return null;
-    }
-  }
-  
   private extractPublicKey(input: any): string {
-    // Extract public key from witness or script
     if (input.witness && input.witness.length > 1) {
       return input.witness[1];
     }
     return 'unknown';
-  }
-  
-  private attemptKeyRecovery(sigs: any[]): string | undefined {
-    if (sigs.length < 2) return undefined;
-    
-    // This is where real ECDSA math would happen
-    // For now, return a placeholder indicating recovery was attempted
-    return '0x' + 'recovered_from_real_data_' + Date.now().toString(16);
   }
   
   getSessionStatus(sessionId: string): AnalysisSession | null {
