@@ -1,4 +1,3 @@
-
 interface AnalysisSession {
   id: string;
   startTime: number;
@@ -35,15 +34,31 @@ interface AnalysisParams {
 }
 
 import { attemptKeyRecoveryFromTransactions, parseDERSignature } from './ecdsaCrypto';
+import { databaseService } from './databaseService';
 
 class CryptoAnalysisService {
   private sessions: Map<string, AnalysisSession> = new Map();
   
   async startAnalysis(params: AnalysisParams): Promise<string> {
-    const sessionId = 'analysis_' + Date.now();
+    console.log('Starting analysis with enhanced parameters:', {
+      blocks: `${params.startBlock}-${params.endBlock}`,
+      mlEnhanced: params.mlEnhanced,
+      deepScan: params.deepScan,
+      maxThreads: params.maxThreads
+    });
+
+    // Create session in database
+    const dbSessionId = await databaseService.createAnalysisSession({
+      start_height: params.startBlock,
+      end_height: params.endBlock,
+      ml_enhanced: params.mlEnhanced,
+      deep_scan: params.deepScan,
+      max_threads: params.maxThreads,
+      status: 'running'
+    });
     
     const session: AnalysisSession = {
-      id: sessionId,
+      id: dbSessionId,
       startTime: Date.now(),
       blocksAnalyzed: 0,
       transactionsAnalyzed: 0,
@@ -52,22 +67,19 @@ class CryptoAnalysisService {
       results: []
     };
     
-    this.sessions.set(sessionId, session);
-    
-    console.log('Starting analysis with enhanced parameters:', {
-      blocks: `${params.startBlock}-${params.endBlock}`,
-      mlEnhanced: params.mlEnhanced,
-      deepScan: params.deepScan,
-      maxThreads: params.maxThreads
-    });
+    this.sessions.set(dbSessionId, session);
     
     // Start analysis in background
-    this.performAnalysis(sessionId, params).catch(error => {
+    this.performAnalysis(dbSessionId, params).catch(error => {
       console.error('Analysis failed:', error);
       session.status = 'error';
+      databaseService.updateAnalysisSession(dbSessionId, { 
+        status: 'error', 
+        error_message: error.message 
+      });
     });
     
-    return sessionId;
+    return dbSessionId;
   }
   
   private async performAnalysis(sessionId: string, params: AnalysisParams) {
@@ -98,8 +110,42 @@ class CryptoAnalysisService {
         
         // Analyze for vulnerabilities using real crypto implementation
         const vulnerabilities = await this.detectVulnerabilities(transactions, params);
+        
+        // Store vulnerabilities in database
+        for (const vuln of vulnerabilities) {
+          await databaseService.createVulnerability({
+            analysis_session_id: sessionId,
+            vulnerability_type: vuln.type,
+            severity: vuln.severity,
+            r_value: vuln.details.rValue,
+            block_height: vuln.blockHeight,
+            confidence: vuln.confidence,
+            recovered_private_key: vuln.recoveredKey,
+            signature_data: {
+              rValue: vuln.details.rValue,
+              sValue: vuln.details.sValue,
+              publicKey: vuln.details.publicKey
+            },
+            analysis_metadata: {
+              mlEnhanced: params.mlEnhanced,
+              deepScan: params.deepScan,
+              maxThreads: params.maxThreads
+            },
+            affected_transactions: vuln.details.relatedTxids
+          });
+        }
+        
         session.results.push(...vulnerabilities);
         session.vulnerabilitiesFound = session.results.length;
+        
+        // Update session progress in database
+        const progress = Math.round((session.blocksAnalyzed / blocks.length) * 100);
+        await databaseService.updateAnalysisSession(sessionId, {
+          progress,
+          current_block: block.height,
+          total_transactions: session.transactionsAnalyzed,
+          r_reuse_count: session.vulnerabilitiesFound
+        });
         
         console.log(`Found ${vulnerabilities.length} vulnerabilities in block ${block.height}`);
         
@@ -110,11 +156,24 @@ class CryptoAnalysisService {
       session.status = 'completed';
       session.endTime = Date.now();
       
+      // Mark session as completed in database
+      await databaseService.updateAnalysisSession(sessionId, {
+        status: 'completed',
+        progress: 100,
+        total_blocks: session.blocksAnalyzed,
+        total_transactions: session.transactionsAnalyzed,
+        r_reuse_count: session.vulnerabilitiesFound
+      });
+      
       console.log(`Analysis completed. Total vulnerabilities found: ${session.vulnerabilitiesFound}`);
       
     } catch (error) {
       console.error('Analysis error:', error);
       session.status = 'error';
+      await databaseService.updateAnalysisSession(sessionId, { 
+        status: 'error', 
+        error_message: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   }
   
@@ -264,12 +323,52 @@ class CryptoAnalysisService {
     return 'unknown';
   }
   
-  getSessionStatus(sessionId: string): AnalysisSession | null {
-    return this.sessions.get(sessionId) || null;
+  async getSessionStatus(sessionId: string): Promise<AnalysisSession | null> {
+    // Check memory first
+    const memorySession = this.sessions.get(sessionId);
+    if (memorySession) {
+      return memorySession;
+    }
+    
+    // Fallback to database
+    const dbSession = await databaseService.getAnalysisSession(sessionId);
+    if (dbSession) {
+      const session: AnalysisSession = {
+        id: dbSession.id,
+        startTime: new Date(dbSession.created_at).getTime(),
+        endTime: dbSession.status === 'completed' ? new Date(dbSession.updated_at).getTime() : undefined,
+        blocksAnalyzed: dbSession.total_blocks,
+        transactionsAnalyzed: dbSession.total_transactions,
+        vulnerabilitiesFound: dbSession.r_reuse_count,
+        status: dbSession.status as 'running' | 'completed' | 'error',
+        results: [] // Would need to fetch vulnerabilities separately if needed
+      };
+      return session;
+    }
+    
+    return null;
   }
   
-  getAllSessions(): AnalysisSession[] {
-    return Array.from(this.sessions.values());
+  async getAllSessions(): Promise<AnalysisSession[]> {
+    const dbSessions = await databaseService.getAnalysisSessions(20);
+    return dbSessions.map(dbSession => ({
+      id: dbSession.id,
+      startTime: new Date(dbSession.created_at).getTime(),
+      endTime: dbSession.status === 'completed' ? new Date(dbSession.updated_at).getTime() : undefined,
+      blocksAnalyzed: dbSession.total_blocks,
+      transactionsAnalyzed: dbSession.total_transactions,
+      vulnerabilitiesFound: dbSession.r_reuse_count,
+      status: dbSession.status as 'running' | 'completed' | 'error',
+      results: [] // Would need to fetch vulnerabilities separately if needed
+    }));
+  }
+
+  async getVulnerabilities(sessionId?: string) {
+    return await databaseService.getVulnerabilities(sessionId);
+  }
+
+  async getVulnerabilityStats() {
+    return await databaseService.getVulnerabilityStats();
   }
 }
 

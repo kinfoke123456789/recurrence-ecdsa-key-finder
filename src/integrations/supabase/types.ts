@@ -96,9 +96,12 @@ export type Database = {
         Row: {
           created_at: string
           current_block: number | null
+          deep_scan: boolean | null
           end_height: number
           error_message: string | null
           id: string
+          max_threads: number | null
+          ml_enhanced: boolean | null
           progress: number
           r_reuse_count: number
           start_height: number
@@ -111,9 +114,12 @@ export type Database = {
         Insert: {
           created_at?: string
           current_block?: number | null
+          deep_scan?: boolean | null
           end_height: number
           error_message?: string | null
           id?: string
+          max_threads?: number | null
+          ml_enhanced?: boolean | null
           progress?: number
           r_reuse_count?: number
           start_height: number
@@ -126,9 +132,12 @@ export type Database = {
         Update: {
           created_at?: string
           current_block?: number | null
+          deep_scan?: boolean | null
           end_height?: number
           error_message?: string | null
           id?: string
+          max_threads?: number | null
+          ml_enhanced?: boolean | null
           progress?: number
           r_reuse_count?: number
           start_height?: number
@@ -670,44 +679,56 @@ export type Database = {
       vulnerability_details: {
         Row: {
           affected_transactions: Json
+          analysis_metadata: Json | null
           analysis_session_id: string
           bitcoin_address: string | null
           block_height: number | null
+          confidence: number | null
           created_at: string
           id: string
           private_key_hex: string | null
           private_key_wif: string | null
           public_key: string | null
           r_value: string
+          recovered_private_key: string | null
           severity: Database["public"]["Enums"]["vulnerability_severity"]
+          signature_data: Json | null
           vulnerability_type: string
         }
         Insert: {
           affected_transactions?: Json
+          analysis_metadata?: Json | null
           analysis_session_id: string
           bitcoin_address?: string | null
           block_height?: number | null
+          confidence?: number | null
           created_at?: string
           id?: string
           private_key_hex?: string | null
           private_key_wif?: string | null
           public_key?: string | null
           r_value: string
+          recovered_private_key?: string | null
           severity: Database["public"]["Enums"]["vulnerability_severity"]
+          signature_data?: Json | null
           vulnerability_type: string
         }
         Update: {
           affected_transactions?: Json
+          analysis_metadata?: Json | null
           analysis_session_id?: string
           bitcoin_address?: string | null
           block_height?: number | null
+          confidence?: number | null
           created_at?: string
           id?: string
           private_key_hex?: string | null
           private_key_wif?: string | null
           public_key?: string | null
           r_value?: string
+          recovered_private_key?: string | null
           severity?: Database["public"]["Enums"]["vulnerability_severity"]
+          signature_data?: Json | null
           vulnerability_type?: string
         }
         Relationships: [
@@ -821,7 +842,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_analysis_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       vulnerability_severity: "low" | "medium" | "high" | "critical"
