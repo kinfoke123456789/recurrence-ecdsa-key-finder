@@ -8,13 +8,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Lock, Unlock, Calculator, Zap, Shield, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Lock, Unlock, Calculator, Zap, Shield, AlertTriangle, ExternalLink, Globe, BarChart3, History, Activity } from 'lucide-react';
 import AttackVisualization from '@/components/AttackVisualization';
 import ParameterPanel from '@/components/ParameterPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import MathematicalBackground from '@/components/MathematicalBackground';
 import RealDataAnalysis from '@/components/RealDataAnalysis';
 import VulnerabilityDetails from '@/components/VulnerabilityDetails';
+import LiveBlockchain from '@/components/LiveBlockchain';
+import VulnerabilityHistory from '@/components/VulnerabilityHistory';
+import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 
 // Utility function to generate random hex string
 const generateRandomHex = (length: number) => {
@@ -44,7 +47,7 @@ const Index = () => {
   const [attackProgress, setAttackProgress] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState(null);
-  const [activeTab, setActiveTab] = useState('live-analysis');
+  const [activeTab, setActiveTab] = useState('live-blockchain');
   const [selectedVulnerability, setSelectedVulnerability] = useState(null);
   const [parameters, setParameters] = useState({
     N: 7,
@@ -110,10 +113,15 @@ const Index = () => {
     window.open(explorerUrl, '_blank');
   };
 
+  const handleNewVulnerability = (vulnerability: any) => {
+    console.log('New vulnerability detected from live scan:', vulnerability);
+    setSelectedVulnerability(vulnerability);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800">
       <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
+        {/* Enhanced Hero Section */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-6">
             <div className="relative">
@@ -122,20 +130,23 @@ const Index = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            ECDSA Vulnerability Scanner
+            Advanced ECDSA Security Suite
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Real-time blockchain analysis for ECDSA nonce vulnerabilities and private key recovery from actual transaction data
+            Next-generation blockchain security analysis with real-time vulnerability detection, advanced cryptographic recovery, and comprehensive threat intelligence
           </p>
-          <div className="flex items-center justify-center gap-4 mt-6">
+          <div className="flex items-center justify-center gap-4 mt-6 flex-wrap">
             <Badge variant="secondary" className="bg-green-600/20 text-green-300 border-green-500/30">
-              Live Blockchain Data
+              Live Network Monitoring
             </Badge>
             <Badge variant="secondary" className="bg-red-600/20 text-red-300 border-red-500/30">
-              Real Vulnerability Detection
+              Advanced Cryptanalysis
             </Badge>
             <Badge variant="secondary" className="bg-blue-600/20 text-blue-300 border-blue-500/30">
-              Private Key Recovery
+              ML-Enhanced Detection
+            </Badge>
+            <Badge variant="secondary" className="bg-purple-600/20 text-purple-300 border-purple-500/30">
+              Real-time Analytics
             </Badge>
           </div>
         </div>
@@ -144,25 +155,49 @@ const Index = () => {
         <Alert className="mb-8 border-amber-500/30 bg-amber-500/10">
           <AlertTriangle className="h-4 w-4 text-amber-400" />
           <AlertDescription className="text-amber-200">
-            This tool analyzes real blockchain data for actual vulnerabilities. Use responsibly and only for legitimate security research.
+            This advanced security suite analyzes real blockchain data for cryptographic vulnerabilities. Use responsibly and only for legitimate security research and penetration testing.
           </AlertDescription>
         </Alert>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-700">
+          <TabsList className="grid w-full grid-cols-6 bg-slate-800/50 border-slate-700">
+            <TabsTrigger value="live-blockchain" className="data-[state=active]:bg-purple-600">
+              <Globe className="w-4 h-4 mr-2" />
+              Live Network
+            </TabsTrigger>
             <TabsTrigger value="live-analysis" className="data-[state=active]:bg-purple-600">
-              Live Analysis
+              <Activity className="w-4 h-4 mr-2" />
+              Real Analysis
             </TabsTrigger>
             <TabsTrigger value="simulation" className="data-[state=active]:bg-purple-600">
+              <Calculator className="w-4 h-4 mr-2" />
               Demo Mode
             </TabsTrigger>
-            <TabsTrigger value="theory" className="data-[state=active]:bg-purple-600">
-              Mathematical Background
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-600">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </TabsTrigger>
-            <TabsTrigger value="results" className="data-[state=active]:bg-purple-600">
-              Results Analysis
+            <TabsTrigger value="history" className="data-[state=active]:bg-purple-600">
+              <History className="w-4 h-4 mr-2" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="theory" className="data-[state=active]:bg-purple-600">
+              <Shield className="w-4 h-4 mr-2" />
+              Theory
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="live-blockchain">
+            <LiveBlockchain onNewVulnerability={handleNewVulnerability} />
+            {selectedVulnerability && (
+              <div className="mt-6">
+                <VulnerabilityDetails 
+                  vulnerability={selectedVulnerability}
+                  onViewExplorer={handleViewExplorer}
+                />
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="live-analysis">
             <RealDataAnalysis onVulnerabilitySelect={handleVulnerabilitySelect} />
@@ -190,7 +225,7 @@ const Index = () => {
                     Attack Configuration
                   </CardTitle>
                   <CardDescription className="text-gray-400">
-                    Configure the parameters for the ECDSA nonce attack
+                    Configure the parameters for the ECDSA nonce attack simulation
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -267,6 +302,22 @@ const Index = () => {
                 results={results}
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AdvancedAnalytics />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <VulnerabilityHistory onViewDetails={handleVulnerabilitySelect} />
+            {selectedVulnerability && (
+              <div className="mt-6">
+                <VulnerabilityDetails 
+                  vulnerability={selectedVulnerability}
+                  onViewExplorer={handleViewExplorer}
+                />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="theory">
