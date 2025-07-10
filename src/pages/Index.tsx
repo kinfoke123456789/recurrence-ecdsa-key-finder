@@ -8,12 +8,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { Lock, Unlock, Calculator, Zap, Shield, AlertTriangle } from 'lucide-react';
+import { Lock, Unlock, Calculator, Zap, Shield, AlertTriangle, ExternalLink } from 'lucide-react';
 import AttackVisualization from '@/components/AttackVisualization';
 import ParameterPanel from '@/components/ParameterPanel';
 import ResultsDisplay from '@/components/ResultsDisplay';
 import MathematicalBackground from '@/components/MathematicalBackground';
 import RealDataAnalysis from '@/components/RealDataAnalysis';
+import VulnerabilityDetails from '@/components/VulnerabilityDetails';
 
 // Utility function to generate random hex string
 const generateRandomHex = (length: number) => {
@@ -43,6 +44,8 @@ const Index = () => {
   const [attackProgress, setAttackProgress] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState(null);
+  const [activeTab, setActiveTab] = useState('live-analysis');
+  const [selectedVulnerability, setSelectedVulnerability] = useState(null);
   const [parameters, setParameters] = useState({
     N: 7,
     curve: 'SECP256k1',
@@ -56,16 +59,14 @@ const Index = () => {
     setAttackProgress(0);
     setResults(null);
     
-    // Generate a new random private key for this attack
     const actualKey = generatePrivateKey();
-    const recoveredKey = actualKey; // In a real attack, this would be computed
+    const recoveredKey = actualKey;
     
     console.log('Starting attack simulation with parameters:', parameters);
     console.log('Generated private key:', actualKey);
     
-    // Simulate the attack progression with more realistic timing
     const steps = [15, 30, 45, 60, 75, 90, 100];
-    const delays = [400, 500, 600, 700, 800, 600, 400]; // Variable delays for realism
+    const delays = [400, 500, 600, 700, 800, 600, 400];
     
     for (let i = 0; i < steps.length; i++) {
       await new Promise(resolve => setTimeout(resolve, delays[i]));
@@ -73,21 +74,17 @@ const Index = () => {
       console.log(`Attack progress: ${steps[i]}%`);
     }
     
-    // Calculate realistic polynomial degree based on N
     const polynomialDegree = calculatePolynomialDegree(parameters.N);
-    
-    // Simulate execution time based on polynomial degree
     const baseTime = 1.2;
     const complexityFactor = Math.pow(polynomialDegree / 8, 1.5);
     const executionTime = (baseTime * complexityFactor).toFixed(1) + 's';
     
-    // Generate realistic results
     const attackResults = {
-      success: Math.random() > 0.1, // 90% success rate for demo
+      success: Math.random() > 0.1,
       recoveredKey: recoveredKey,
       actualKey: actualKey,
       polynomialDegree: polynomialDegree,
-      rootsFound: Math.floor(Math.random() * 3) + 1, // 1-3 roots
+      rootsFound: Math.floor(Math.random() * 3) + 1,
       timeElapsed: executionTime,
       signaturesUsed: parameters.N,
       curve: parameters.curve
@@ -96,6 +93,21 @@ const Index = () => {
     console.log('Attack completed with results:', attackResults);
     setResults(attackResults);
     setIsRunning(false);
+  };
+
+  const handleTabChange = (value: string) => {
+    console.log('Switching to tab:', value);
+    setActiveTab(value);
+  };
+
+  const handleVulnerabilitySelect = (vulnerability: any) => {
+    console.log('Selected vulnerability:', vulnerability);
+    setSelectedVulnerability(vulnerability);
+  };
+
+  const handleViewExplorer = (txid: string) => {
+    const explorerUrl = `https://blockstream.info/tx/${txid}`;
+    window.open(explorerUrl, '_blank');
   };
 
   return (
@@ -136,19 +148,40 @@ const Index = () => {
           </AlertDescription>
         </Alert>
 
-        <Tabs defaultValue="live-analysis" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-8">
           <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-700">
-            <TabsTrigger value="live-analysis" className="data-[state=active]:bg-purple-600">Live Analysis</TabsTrigger>
-            <TabsTrigger value="simulation" className="data-[state=active]:bg-purple-600">Demo Mode</TabsTrigger>
-            <TabsTrigger value="theory" className="data-[state=active]:bg-purple-600">Mathematical Background</TabsTrigger>
-            <TabsTrigger value="results" className="data-[state=active]:bg-purple-600">Results Analysis</TabsTrigger>
+            <TabsTrigger value="live-analysis" className="data-[state=active]:bg-purple-600">
+              Live Analysis
+            </TabsTrigger>
+            <TabsTrigger value="simulation" className="data-[state=active]:bg-purple-600">
+              Demo Mode
+            </TabsTrigger>
+            <TabsTrigger value="theory" className="data-[state=active]:bg-purple-600">
+              Mathematical Background
+            </TabsTrigger>
+            <TabsTrigger value="results" className="data-[state=active]:bg-purple-600">
+              Results Analysis
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="live-analysis">
-            <RealDataAnalysis />
+            <RealDataAnalysis onVulnerabilitySelect={handleVulnerabilitySelect} />
+            {selectedVulnerability && (
+              <div className="mt-6">
+                <VulnerabilityDetails 
+                  vulnerability={selectedVulnerability}
+                  onViewExplorer={handleViewExplorer}
+                />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="simulation" className="space-y-6">
+            <ParameterPanel 
+              parameters={parameters} 
+              setParameters={setParameters} 
+            />
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
@@ -169,7 +202,7 @@ const Index = () => {
                         type="number"
                         value={parameters.N}
                         onChange={(e) => setParameters({...parameters, N: parseInt(e.target.value)})}
-                        className="bg-slate-700 border-slate-600 text-white"
+                        className="bg-slate-700 border-slate-600 text-white mt-2"
                         min="4"
                         max="10"
                         disabled={isRunning}
@@ -181,7 +214,7 @@ const Index = () => {
                         id="curve"
                         value={parameters.curve}
                         onChange={(e) => setParameters({...parameters, curve: e.target.value})}
-                        className="bg-slate-700 border-slate-600 text-white"
+                        className="bg-slate-700 border-slate-600 text-white mt-2"
                         readOnly
                       />
                     </div>

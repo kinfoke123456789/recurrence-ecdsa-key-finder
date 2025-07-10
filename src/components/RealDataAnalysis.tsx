@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Activity, 
   AlertTriangle, 
@@ -31,7 +30,11 @@ interface AnalysisResult {
   vulnerabilities: any[];
 }
 
-const RealDataAnalysis = () => {
+interface RealDataAnalysisProps {
+  onVulnerabilitySelect?: (vulnerability: any) => void;
+}
+
+const RealDataAnalysis = ({ onVulnerabilitySelect }: RealDataAnalysisProps) => {
   const [analysisParams, setAnalysisParams] = useState({
     startBlock: 850000,
     endBlock: 850010,
@@ -48,7 +51,6 @@ const RealDataAnalysis = () => {
   });
 
   useEffect(() => {
-    // Simulate real-time updates
     const interval = setInterval(() => {
       if (isAnalyzing && currentAnalysis) {
         setCurrentAnalysis(prev => {
@@ -73,7 +75,6 @@ const RealDataAnalysis = () => {
       console.log('Starting real blockchain cryptographic analysis...');
       console.log('Using actual ECDSA nonce reuse detection algorithms');
       
-      // Initialize analysis session
       const sessionId = await cryptoAnalysisService.startAnalysis(analysisParams);
       
       setCurrentAnalysis({
@@ -86,7 +87,6 @@ const RealDataAnalysis = () => {
         vulnerabilities: []
       });
 
-      // Poll for updates
       const pollInterval = setInterval(async () => {
         const session = cryptoAnalysisService.getSessionStatus(sessionId);
         if (session) {
@@ -136,7 +136,6 @@ const RealDataAnalysis = () => {
     console.log('TX2:', testData.tx2.txid);
     console.log('Expected private key:', testData.expectedPrivateKey);
     
-    // Simulate finding the vulnerability
     const testVuln = {
       type: 'nonce_reuse',
       severity: 'critical',
@@ -153,6 +152,18 @@ const RealDataAnalysis = () => {
     };
     
     setRecentVulnerabilities([testVuln]);
+  };
+
+  const handleVulnerabilityClick = (vulnerability: any) => {
+    console.log('Vulnerability clicked:', vulnerability);
+    if (onVulnerabilitySelect) {
+      onVulnerabilitySelect(vulnerability);
+    }
+  };
+
+  const handleExplorerView = (txid: string) => {
+    const explorerUrl = `https://blockstream.info/tx/${txid}`;
+    window.open(explorerUrl, '_blank');
   };
 
   return (
@@ -186,7 +197,7 @@ const RealDataAnalysis = () => {
                   ...analysisParams, 
                   startBlock: parseInt(e.target.value)
                 })}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-slate-700 border-slate-600 text-white mt-2"
                 disabled={isAnalyzing}
               />
             </div>
@@ -200,7 +211,7 @@ const RealDataAnalysis = () => {
                   ...analysisParams, 
                   endBlock: parseInt(e.target.value)
                 })}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-slate-700 border-slate-600 text-white mt-2"
                 disabled={isAnalyzing}
               />
             </div>
@@ -209,7 +220,7 @@ const RealDataAnalysis = () => {
               <Input
                 id="curve"
                 value={analysisParams.curve}
-                className="bg-slate-700 border-slate-600 text-white"
+                className="bg-slate-700 border-slate-600 text-white mt-2"
                 readOnly
               />
             </div>
@@ -263,7 +274,7 @@ const RealDataAnalysis = () => {
               onClick={runTestAnalysis}
               disabled={isAnalyzing}
               variant="outline"
-              className="flex-1"
+              className="flex-1 border-slate-600 text-white hover:bg-slate-700"
             >
               <Zap className="w-4 h-4 mr-2" />
               Test Crypto Recovery
@@ -286,7 +297,11 @@ const RealDataAnalysis = () => {
           <CardContent>
             <div className="space-y-3">
               {recentVulnerabilities.slice(0, 5).map((vuln, index) => (
-                <Alert key={index} className="border-red-500/30 bg-red-500/10">
+                <Alert 
+                  key={index} 
+                  className="border-red-500/30 bg-red-500/10 cursor-pointer hover:bg-red-500/20 transition-colors"
+                  onClick={() => handleVulnerabilityClick(vuln)}
+                >
                   <AlertTriangle className="h-4 w-4 text-red-400" />
                   <AlertDescription className="text-red-200">
                     <div className="flex justify-between items-start">
@@ -310,7 +325,15 @@ const RealDataAnalysis = () => {
                         <Badge variant="destructive" className="text-xs">
                           {vuln.severity?.toUpperCase()}
                         </Badge>
-                        <Button size="sm" variant="outline" className="h-6 text-xs">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-6 text-xs border-slate-600 hover:bg-slate-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExplorerView(vuln.txid);
+                          }}
+                        >
                           <ExternalLink className="w-3 h-3" />
                         </Button>
                       </div>
