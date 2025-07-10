@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,7 +115,7 @@ const RealDataAnalysis = ({ onVulnerabilitySelect }: RealDataAnalysisProps) => {
       });
 
       const pollInterval = setInterval(async () => {
-        const session = cryptoAnalysisService.getSessionStatus(sessionId);
+        const session = await cryptoAnalysisService.getSessionStatus(sessionId);
         if (session) {
           const progress = session.status === 'completed' ? 100 : 
             Math.min((session.blocksAnalyzed / (analysisParams.endBlock - analysisParams.startBlock + 1)) * 100, 95);
